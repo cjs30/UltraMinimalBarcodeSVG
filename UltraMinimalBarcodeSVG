@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Ultra Minimal Barcode Embroidery</h1>
+<p>Make your barcode <a href="https://barcode.tec-it.com/en/Code128" target='_blank'>here</a> then open it to automatically produce an SVG</p>
+<p><input id='barcodeimage' type="file" accept="image"></p>
+<img id="scream" src="" alt="barcode" hidden>
+<canvas id='out'></canvas>
+
+<script>
+
+function extractbarcode(){
+    fr = new FileReader();
+    fr.onload = loadimage;
+    fr.readAsDataURL(document.getElementById('barcodeimage').files[0]);
+}
+
+document.getElementById('barcodeimage').addEventListener('change', extractbarcode, false);
+let svg='<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">';
+  
+
+function loadimage(){
+     img = document.getElementById('scream');
+  img.onload = function(){
+  canvas.width = img.width;
+    canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+      const imgData = canvas.getContext("2d").getImageData(0, 0, img.width, img.height);  
+  console.log(imgData.data.length, img.width, img.height);  
+  output="";halfway=Math.round(img.height/2);
+  data=[];
+  for(x=0;x<img.width;x+=1){data[x]=0;}
+  for(let y=halfway-3;y<halfway+3;y+=1){
+    for (let x =0; x < img.width; x+=1) {
+        totalbrightness=0;
+        for(let z=0; z<3;z+=1){totalbrightness+=imgData.data[x*4+y*img.width*4+z];}
+        data[x]+=totalbrightness;
+    if(totalbrightness<500){output+="X";}else{output+="_";};
+    }output+="\r\n";
+  }console.log(output,data);outputdata(data);}
+ 
+    img.src = fr.result;  
+    canvas=document.getElementById('out');
+};
+function outputdata(data){
+    white=false;black=true;
+    state=white;threshold=1500;num=0;
+    for(let x=0;x<data.length;x+=1){
+    if(state==white){
+        if(data[x]<threshold){intoblack=x;num+=1;state=black;}
+    }else{
+        if(data[x]>threshold){
+            //console.log(num,intoblack,"-",x,(x-intoblack));state=white;
+            svg+=svgbox(intoblack,x);
+        }
+    }
+    }
+    svg+="</svg>";
+
+download(svg,"output.svg","txt");
+}
+function svgbox(x1,x2){
+    box='';
+    for(x=x1;x<x2;x+=2){
+        box+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="100" stroke="black" />';
+        box+='<line x1="'+x+'" y1="100" x2="'+(x+1)+'" y2="100" stroke="black"  />';
+        box+='<line x1="'+(x+1)+'" y1="100" x2="'+(x+1)+'" y2="0" stroke="black"  />';
+        box+='<line x1="'+(x+1)+'" y1="0" x2="'+(x+2)+'" y2="0" stroke="black"  />';            
+    }
+    //this works box='<rect x="'+x1+'" y="0" width="'+(x2-x1)+'" height="100" />';
+    return box;
+}
+
+function download(data, filename, type) {
+    var file = new Blob([data], {type: type});
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        var a = document.createElement("a"),
+                url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);  
+        }, 0); 
+    }
+}
+</script>
+
+</body>
+</html>
